@@ -20,6 +20,38 @@ class DataProcessor
         $this->dbPassword = 'lc123';
     }
 
+    public function connectToDb()
+    {
+        // Establish the database connection
+        try {
+            $this->conn = new PDO("mysql:host=" . $this->dbHost . ";dbname=" . $this->dbName, $this->dbUser, $this->dbPassword);
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            echo "Database has been connected" . "<br>";
+        } catch (PDOException $e) {
+            echo "Connection failed: " . $e->getMessage();
+        }
+    }
+
+    public function createTable()
+    {
+        if (!$this->conn) {
+            $this->connectToDb();
+        }
+        try {
+            $query = "CREATE TABLE IF NOT EXISTS `catalyst_users`.`users` (`userID` INT NOT NULL AUTO_INCREMENT, `name` VARCHAR(255) NULL, `surname` VARCHAR(255) NOT NULL, `email` VARCHAR(512) NOT NULL, PRIMARY KEY (`userID`), UNIQUE (`email`)) ENGINE = InnoDB";
+
+            $statement = $this->conn->prepare($query);
+            $statement->execute();
+            echo "Table users has been created.";
+            $this->conn = null;
+            return true;
+        } catch (PDOException $e) {
+            echo "Error: " . $e->getMessage();
+            $this->conn = null;
+            return false;
+        }
+    }
+
     public function csvReader($csvPath)
     {
         $spreadsheet = IOFactory::load($csvPath);
@@ -61,18 +93,6 @@ class DataProcessor
         return $dataArray;
     }
 
-    public function connectToDb()
-    {
-        // Establish the database connection
-        try {
-            $this->conn = new PDO("mysql:host=" . $this->dbHost . ";dbname=" . $this->dbName, $this->dbUser, $this->dbPassword);
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            echo "Database has been connected" . "<br>";
-        } catch (PDOException $e) {
-            echo "Connection failed: " . $e->getMessage();
-        }
-    }
-
     private function emailFilter($email)
     {
         if (!$this->conn) {
@@ -93,6 +113,7 @@ class DataProcessor
             echo "Error : $email is invalid email format!" . "<br>";
             return $validEmail;
         }
+        $this->conn = null;
         return $validEmail;
     }
 
@@ -101,7 +122,8 @@ class DataProcessor
         if (!$this->conn) {
             $this->connectToDb();
         }
-        $count = 0;
+        $addCount = 0;
+        $skippedCount = 0;
         foreach ($data as $index) {
             $userName = $index['name'];
             $userSurname = $index['surname'];
@@ -109,6 +131,7 @@ class DataProcessor
 
             if ($this->emailFilter($userEmail) == false) {
                 echo "Warning : This line will be skipped." . "<br>";
+                $skippedCount++;
             } else {
                 $stmt = $this->conn->prepare("INSERT INTO users 
                     (name,surname,email)
@@ -118,9 +141,13 @@ class DataProcessor
                 $stmt->bindParam(':surname', $userSurname, PDO::PARAM_STR);
                 $stmt->bindParam(':email', $userEmail, PDO::PARAM_STR);
                 $stmt->execute();
-                $count++;
+                $addCount++;
             }
         }
-        echo $count . " users have been added.";
+        $this->conn = null;
+        $totalCount = $addCount + $skippedCount;
+        echo "Total $totalCount rows in CSV file" . "<br>";
+        echo $addCount . " users have been added to database." . "<br>";
+        echo $skippedCount . " users failed to be added" . "<br>";
     }
 }
