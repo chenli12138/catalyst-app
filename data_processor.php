@@ -113,11 +113,10 @@ class DataProcessor
             echo "Error : $email is invalid email format!" . "<br>";
             return $validEmail;
         }
-        $this->conn = null;
         return $validEmail;
     }
 
-    public function loadToDb($data)
+    public function loadToDb($data, $dryRun = false)
     {
         if (!$this->conn) {
             $this->connectToDb();
@@ -133,21 +132,29 @@ class DataProcessor
                 echo "Warning : This line will be skipped." . "<br>";
                 $skippedCount++;
             } else {
-                $stmt = $this->conn->prepare("INSERT INTO users 
+                if ($dryRun == false) {
+                    $stmt = $this->conn->prepare("INSERT INTO users 
                     (name,surname,email)
                     VALUES (:name,:surname,:email)");
 
-                $stmt->bindParam(':name', $userName, PDO::PARAM_STR);
-                $stmt->bindParam(':surname', $userSurname, PDO::PARAM_STR);
-                $stmt->bindParam(':email', $userEmail, PDO::PARAM_STR);
-                $stmt->execute();
+                    $stmt->bindParam(':name', $userName, PDO::PARAM_STR);
+                    $stmt->bindParam(':surname', $userSurname, PDO::PARAM_STR);
+                    $stmt->bindParam(':email', $userEmail, PDO::PARAM_STR);
+                    $stmt->execute();
+                }
+
                 $addCount++;
             }
         }
         $this->conn = null;
         $totalCount = $addCount + $skippedCount;
+        if ($dryRun) {
+            echo "-----We are in Dry run mode. No data will be inserted.-----" . "<br>";
+        }
+
         echo "Total $totalCount rows in CSV file" . "<br>";
-        echo $addCount . " users have been added to database." . "<br>";
-        echo $skippedCount . " users failed to be added" . "<br>";
+        echo $dryRun ? $addCount . " users will be added to database." . "<br>" : $addCount . " users have been added to database." . "<br>";
+
+        echo $skippedCount . " users cannot be added" . "<br>";
     }
 }
