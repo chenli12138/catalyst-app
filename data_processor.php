@@ -11,6 +11,7 @@ class DataProcessor
     private $dbName;
     private $dbUser;
     private $dbPassword;
+    private $processedEmails;
 
     public function __construct()
     {
@@ -18,6 +19,7 @@ class DataProcessor
         $this->dbName = 'catalyst_users';
         $this->dbUser = 'chen';
         $this->dbPassword = 'lc123';
+        $this->processedEmails = [];
     }
 
     public function connectToDb()
@@ -112,7 +114,13 @@ class DataProcessor
             $validEmail = false;
             echo "Error : $email is invalid email format!" . "<br>";
             return $validEmail;
+        } elseif (isset($this->processedEmails[$email])) {
+            $validEmail = false;
+            echo "Error : The email $email already in the batch" . "<br>";
+            return $validEmail;
         }
+        // Mark this email as processed in this batch
+        $this->processedEmails[$email] = true;
         return $validEmail;
     }
 
