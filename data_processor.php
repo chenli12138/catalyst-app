@@ -50,7 +50,7 @@ class DataProcessor
 
             $statement = $this->conn->prepare($query);
             $statement->execute();
-            echo "Table users has been created.";
+            fwrite(STDOUT, "Table users has been created." . PHP_EOL);
             $this->conn = null;
             return true;
         } catch (PDOException $e) {
@@ -114,15 +114,14 @@ class DataProcessor
             // The email already exists
             $validEmail = false;
             fwrite(STDOUT, "Error : The email $email already exists" . PHP_EOL);
-            // echo "Error : The email $email already exists" . PHP_EOL;
             return $validEmail;
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             // Invalid email format
             $validEmail = false;
             fwrite(STDOUT, "Error : $email is invalid email format!" . PHP_EOL);
-            // echo "Error : $email is invalid email format!" . PHP_EOL;
             return $validEmail;
         } elseif (isset($this->processedEmails[$email])) {
+            // same email in the batch
             $validEmail = false;
             fwrite(
                 STDOUT,
@@ -149,7 +148,7 @@ class DataProcessor
             $userEmail = trim($index['email']);
 
             if ($this->emailFilter($userEmail) === false) {
-                echo "Warning : This line will be skipped." . PHP_EOL;
+                fwrite(STDOUT, "Warning : This line will be skipped." . PHP_EOL);
                 $skippedCount++;
             } else {
                 if ($dryRun === false) {
