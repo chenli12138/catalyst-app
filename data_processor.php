@@ -13,7 +13,7 @@ class DataProcessor
     private $dbPassword;
     private $processedEmails;
 
-    public function __construct($host = 'localhost',  $user = 'chen', $pwd = 'lc123')
+    public function __construct($host, $user, $pwd)
     {
         $this->dbHost = $host;
         $this->dbName = 'catalyst_users'; // No databse name is provided in requirement,fixed one used here.
