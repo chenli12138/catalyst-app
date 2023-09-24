@@ -13,12 +13,12 @@ class DataProcessor
     private $dbPassword;
     private $processedEmails;
 
-    public function __construct()
+    public function __construct($host = 'localhost',  $user = 'chen', $pwd = 'lc123')
     {
-        $this->dbHost = 'localhost';
-        $this->dbName = 'catalyst_users';
-        $this->dbUser = 'chen';
-        $this->dbPassword = 'lc123';
+        $this->dbHost = $host;
+        $this->dbName = 'catalyst_users'; // No databse name is provided in requirement,fixed one used here.
+        $this->dbUser = $user;
+        $this->dbPassword = $pwd;
         $this->processedEmails = [];
     }
 
@@ -28,7 +28,7 @@ class DataProcessor
         try {
             $this->conn = new PDO("mysql:host=" . $this->dbHost . ";dbname=" . $this->dbName, $this->dbUser, $this->dbPassword);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            echo "Database has been connected" . "<br>";
+            echo "Database has been connected" . PHP_EOL;
         } catch (PDOException $e) {
             echo "Connection failed: " . $e->getMessage();
         }
@@ -40,7 +40,13 @@ class DataProcessor
             $this->connectToDb();
         }
         try {
-            $query = "CREATE TABLE IF NOT EXISTS `catalyst_users`.`users` (`userID` INT NOT NULL AUTO_INCREMENT, `name` VARCHAR(255) NULL, `surname` VARCHAR(255) NOT NULL, `email` VARCHAR(512) NOT NULL, PRIMARY KEY (`userID`), UNIQUE (`email`)) ENGINE = InnoDB";
+            $query = "CREATE TABLE IF NOT EXISTS `users` (
+                                                            `userID` INT NOT NULL AUTO_INCREMENT, 
+                                                            `name` VARCHAR(255) NULL, 
+                                                            `surname` VARCHAR(255) NOT NULL, 
+                                                            `email` VARCHAR(512) NOT NULL, PRIMARY KEY (`userID`), 
+                                                            UNIQUE (`email`)
+                                                            )";
 
             $statement = $this->conn->prepare($query);
             $statement->execute();
@@ -107,16 +113,22 @@ class DataProcessor
         if ($stmt->rowCount() > 0) {
             // The email already exists
             $validEmail = false;
-            echo "Error : The email $email already exists" . "<br>";
+            fwrite(STDOUT, "Error : The email $email already exists" . PHP_EOL);
+            // echo "Error : The email $email already exists" . PHP_EOL;
             return $validEmail;
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             // Invalid email format
             $validEmail = false;
-            echo "Error : $email is invalid email format!" . "<br>";
+            fwrite(STDOUT, "Error : $email is invalid email format!" . PHP_EOL);
+            // echo "Error : $email is invalid email format!" . PHP_EOL;
             return $validEmail;
         } elseif (isset($this->processedEmails[$email])) {
             $validEmail = false;
-            echo "Error : The email $email already in the batch" . "<br>";
+            fwrite(
+                STDOUT,
+                "Error : The email $email already in the batch" . PHP_EOL
+            );
+            // echo "Error : The email $email already in the batch" . PHP_EOL;
             return $validEmail;
         }
         // Mark this email as processed in this batch
@@ -136,11 +148,11 @@ class DataProcessor
             $userSurname = $index['surname'];
             $userEmail = trim($index['email']);
 
-            if ($this->emailFilter($userEmail) == false) {
-                echo "Warning : This line will be skipped." . "<br>";
+            if ($this->emailFilter($userEmail) === false) {
+                echo "Warning : This line will be skipped." . PHP_EOL;
                 $skippedCount++;
             } else {
-                if ($dryRun == false) {
+                if ($dryRun === false) {
                     $stmt = $this->conn->prepare("INSERT INTO users 
                     (name,surname,email)
                     VALUES (:name,:surname,:email)");
@@ -157,12 +169,13 @@ class DataProcessor
         $this->conn = null;
         $totalCount = $addCount + $skippedCount;
         if ($dryRun) {
-            echo "-----We are in Dry run mode. No data will be inserted.-----" . "<br>";
+
+            echo "\033[01;31m -----We are in Dry run mode. No data will be inserted.----- \033[0m" . PHP_EOL;
         }
 
-        echo "Total $totalCount rows in CSV file" . "<br>";
-        echo $dryRun ? $addCount . " users will be added to database." . "<br>" : $addCount . " users have been added to database." . "<br>";
+        echo "Total $totalCount rows in CSV file" . PHP_EOL;
+        echo $dryRun ? $addCount . " users will be added to database." . PHP_EOL  : $addCount . " users have been added to database." . PHP_EOL;
 
-        echo $skippedCount . " users cannot be added" . "<br>";
+        echo $skippedCount . " users cannot be added" . PHP_EOL;
     }
 }
